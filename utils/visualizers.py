@@ -1,12 +1,16 @@
 import matplotlib.pyplot as plt
 
 
-def visualize(**images, savepath=None):
+def visualize(**images):
     """
-    plot images in a row
+    plot images in a row. include arg 'savepath=/path/to/file.ext' to save the output
     :param images: what to plot paired with desired title [title=array]
-    :param savepath: where to save the resulting plot if desired [str]
     """
+    # check if the save path is there and remove it before plotting
+    if 'savepath' in images.keys():
+        ptf = images['savepath']
+        images.pop('savepath')
+        
     n = len(images)
     if 'mask' in images.keys():
         n += images['mask'].shape[2]-1
@@ -27,6 +31,6 @@ def visualize(**images, savepath=None):
             plt.imshow(image, cmap='gray') 
         else:
             plt.imshow(image)
-            if savepath:
-                plt.savefig(savepath)
+            if ptf:
+                plt.savefig(ptf)
     plt.show()
