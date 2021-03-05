@@ -1,5 +1,5 @@
 import cv2
-import albumenations as alb
+import albumentations as alb
 
 
 def training_transform(ht=128, wd=128):
