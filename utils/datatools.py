@@ -1,6 +1,7 @@
 import os
 import glob
 import numpy as np
+import cv2
 from torch.utils.data import Dataset as BaseDataset
 
 
@@ -8,35 +9,42 @@ class PlanktonDataset(BaseDataset):
     """
     PlanktonDataset. Read images from list in VOC format, apply augmentation and preprocessing transformations.
     :param root: root of VOC-like directory [str]
-    :param img_set: path to image list to consider [str] 
+    :param img_set: path to image list or list to consider [str OR list] 
     :param augs: transforms to preform for augmentations [func]
     :param preproc: preprocessing steps [resize, normalization] [func]
     :param mapping: dictionary of mask pixel value to class mapping [dict]
-    :param dummy_clr: boolean flag to signal stacking gray channel to 3 channel to match network architecture [bool]
+    :param dummy_clf: boolean flag to signal stacking gray channel to 3 channel to match network architecture [bool]
     :return: dataset object
     """
     
     CLASSES = ['copepod', 'eggs']
     
     def __init__(self, root=None, img_set=None, classes=None, augs=None, preproc=None, 
-                 mapping={50: 1, 100: 2}, dummy_clr=True):
+                 mapping={50: 1, 100: 2}, dummy_clf=True):
 
         self.root = root
         img_dir = os.path.join(root, 'JPEGImages')
         seg_dir = os.path.join(root, 'SegmentationMask')
         
         # if the image set given is not an absolute path, assume it lives in VOC structure
-        if not os.path.isabs(img_set):
-            img_set = os.path.join(root, 'ImageSets', 'Main', img_set)
-            
-        # get the list of image-ids
-        with open(img_set, 'r') as ff:
-            tmp = list(ff)
-            ff.close
-        self.ids = [line.strip() for line in tmp]
+        if isinstance(img_set, list):
+            # if the input is list of ids, put them in the proper place
+            self.ids = img_set
+        else:
+            # otherwise read the file
+            if not os.path.isabs(img_set):
+                img_set = os.path.join(root, 'ImageSets', 'Main', img_set)
+
+            # get the list of image-ids
+            with open(img_set, 'r') as ff:
+                tmp = list(ff)
+                ff.close
+            self.ids = [line.strip() for line in tmp]
+        
         self.images = [os.path.join(img_dir, f'{line}.jpg') for line in self.ids]
         self.masks = [os.path.join(seg_dir, f'{line}.png') for line in self.ids]
         self.class_values = [self.CLASSES.index(ii.lower()) for ii in classes]
+        self.dummy_clf = dummy_clf
         
         self.augs = augs
         self.preproc = preproc
@@ -73,7 +81,7 @@ class PlanktonDataset(BaseDataset):
         # apply preprocessing
         if self.preproc:
             # this sets up dummy color channels in order to do imagenet preprocessing
-            if dummy_clf:
+            if self.dummy_clf:
                 image=np.stack([image, image, image], axis=-1)
                 
             sample = self.preproc(image=image, mask=mask)
